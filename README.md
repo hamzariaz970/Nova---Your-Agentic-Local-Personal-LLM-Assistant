@@ -1,6 +1,6 @@
-# LocalAssistant
+# Nova - Your Agentic Local Personal LLM Assistant
 
-LocalAssistant is a fully **local** personal AI assistant:
+Nova is a fully **local** personal AI assistant:
 
 * 💬 Chat with a **local LLM** (via [Ollama](https://ollama.com))
 * 📄 Ask questions about your **local documents** using a simple RAG (Retrieval-Augmented Generation) pipeline
