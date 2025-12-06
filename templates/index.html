@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Local AI Assistant</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <!-- Left: Chats -->
+  <aside class="sidebar sidebar-left">
+    <div class="sidebar-header">
+      <div class="sidebar-title">
+        <span class="dot"></span>
+        <span>Chats</span>
+      </div>
+      <button id="new-chat-btn" class="pill-btn">New</button>
+    </div>
+    <div id="conversation-list" class="conversation-list">
+      <span class="muted small">No conversations yet.</span>
+    </div>
+  </aside>
+
+  <!-- Center: Chat -->
+  <main class="chat-main">
+    <header class="chat-header">
+      <div class="chat-header-left">
+        <button id="sidebar-toggle" class="sidebar-toggle-btn" aria-label="Toggle sidebars">☰</button>
+        <div class="chat-title-block">
+          <div class="chat-title">Nova - Your Personal AI Assistant</div>
+          <div class="chat-subtitle muted small">
+            Private · Local · Qwen 3 4B
+          </div>
+        </div>
+      </div>
+      <span class="pill" id="conversation-meta">Conversation</span>
+    </header>
+
+    <section class="chat-scroll">
+      <!-- Empty state -->
+      <div id="empty-state" class="empty-state">
+        <h1>Hi! 👋</h1>
+        <p>How can I help you today?</p>
+        <div class="suggestions">
+          <button class="chip">Summarize my notes from today</button>
+          <button class="chip">Create a study plan for exams</button>
+          <button class="chip">Search my documents about KTAS</button>
+        </div>
+      </div>
+
+      <!-- Thinking indicator -->
+      <div id="thinking-box" class="thinking-box"></div>
+
+      <!-- Messages -->
+      <div id="messages" class="messages"></div>
+    </section>
+
+    <div class="chat-input-shell">
+      <form id="chat-form" class="chat-form">
+        <div class="chat-input-wrapper">
+          <textarea
+            id="user-input"
+            placeholder="Ask anything..."
+            rows="1"
+          ></textarea>
+          <button id="send-btn" type="submit" class="send-btn" aria-label="Send">
+            <span>Send</span>
+          </button>
+        </div>
+      </form>
+      <div id="chat-status" class="loading"></div>
+    </div>
+  </main>
+
+  <!-- Right: quick access cards -->
+  <aside class="sidebar sidebar-right">
+    <div class="sidebar-header">
+      <div class="sidebar-title">
+        <span>Workspace</span>
+      </div>
+    </div>
+
+    <div class="sidebar-card-list">
+      <button class="sidebar-card" id="open-tasks-page">
+        <div class="sidebar-card-icon">✔</div>
+        <div class="sidebar-card-text">
+          <div class="sidebar-card-title">Tasks</div>
+          <div class="sidebar-card-subtitle">View &amp; manage to-dos</div>
+        </div>
+      </button>
+
+      <button class="sidebar-card" id="open-notes-page">
+        <div class="sidebar-card-icon">📝</div>
+        <div class="sidebar-card-text">
+          <div class="sidebar-card-title">Notes</div>
+          <div class="sidebar-card-subtitle">Quick personal notes</div>
+        </div>
+      </button>
+
+      <!-- RAG / Local Docs card -->
+      <button class="sidebar-card" id="open-rag-page">
+        <div class="sidebar-card-icon">📂</div>
+        <div class="sidebar-card-text">
+          <div class="sidebar-card-title">RAG Files</div>
+          <div class="sidebar-card-subtitle">Manage local documents</div>
+        </div>
+      </button>
+
+      <button class="sidebar-card" id="open-settings-page">
+        <div class="sidebar-card-icon">⚙</div>
+        <div class="sidebar-card-text">
+          <div class="sidebar-card-title">Settings</div>
+          <div class="sidebar-card-subtitle">API &amp; safety toggles</div>
+        </div>
+      </button>
+    </div>
+  </aside>
+</div>
+
+<!-- Overlay “pages” for Tasks / Notes / RAG Files / Settings -->
+<div id="page-overlay" class="page-overlay hidden">
+  <div class="page-overlay-inner">
+    <header class="page-overlay-header">
+      <button id="page-overlay-back" class="pill-btn back-btn">← Back</button>
+      <h2 id="page-overlay-title">Tasks</h2>
+    </header>
+
+    <!-- Tasks page -->
+    <div id="tasks-page" class="page-section hidden">
+      <div class="tasks-layout">
+        <section class="tasks-main">
+          <div class="tasks-main-header">
+            <h3>My tasks</h3>
+            <button id="refresh-tasks-btn" class="pill-btn small-pill">Refresh</button>
+          </div>
+          <div id="tasks-list" class="tasks-list">
+            <span class="muted small">No tasks yet.</span>
+          </div>
+        </section>
+
+        <section class="tasks-create">
+          <h3>Add task</h3>
+          <form id="task-create-form" class="task-create-form">
+            <input
+              id="task-title-input"
+              type="text"
+              placeholder="What do you want to get done?"
+              required
+            />
+            <label>
+              Due date &amp; time (optional)
+              <input
+                id="task-due-input"
+                type="datetime-local"
+              />
+            </label>
+            <button type="submit" class="pill-btn full-width">Add task</button>
+          </form>
+          <p class="muted small">
+            Tip: you can also ask LocalAssistant in chat to create tasks from natural language.
+          </p>
+        </section>
+      </div>
+    </div>
+
+    <!-- Notes page -->
+    <div id="notes-page" class="page-section hidden">
+      <div class="notes-layout">
+        <section class="notes-main">
+          <h3>Notes</h3>
+          <div id="notes-list" class="notes-list">
+            <span class="muted small">No notes yet.</span>
+          </div>
+        </section>
+        <section class="notes-create">
+          <h3>Quick note</h3>
+          <form id="note-create-form" class="note-create-form">
+            <input
+              id="note-title-input"
+              type="text"
+              placeholder="Title (optional)"
+            />
+            <textarea
+              id="note-content-input"
+              rows="3"
+              placeholder="Write a short note..."
+              required
+            ></textarea>
+            <button type="submit" class="pill-btn full-width">Save note</button>
+          </form>
+        </section>
+      </div>
+    </div>
+
+    <!-- RAG page -->
+    <div id="rag-page" class="page-section hidden">
+      <div class="rag-card">
+        <header class="rag-header">
+          <h2>RAG Files</h2>
+          <p class="rag-subtitle">
+            Upload documents into local RAG storage and manage which files are indexed.
+          </p>
+        </header>
+
+        <!-- Upload area -->
+        <form id="rag-upload-form" class="rag-upload-form">
+          <div class="rag-upload-top">
+            <div class="rag-upload-labels">
+              <span class="rag-upload-title">Add files to local RAG storage</span>
+              <span class="rag-upload-hint muted small">
+                Supported: .txt, .md, .pdf, .docx, .pptx, .csv, .html, .py
+              </span>
+            </div>
+            <input id="rag-file-input" type="file" multiple />
+            <button type="submit" class="pill-btn rag-upload-btn">
+              Upload &amp; Index
+            </button>
+          </div>
+          <div id="rag-upload-status" class="rag-upload-status muted small"></div>
+        </form>
+
+        <!-- Indexed files -->
+        <section class="rag-files-section">
+          <div class="rag-files-header">
+            <h3>Indexed files</h3>
+            <span id="rag-files-count" class="muted small"></span>
+          </div>
+
+          <div id="rag-files-wrapper" class="rag-files-wrapper">
+            <ul id="rag-files-list" class="rag-files-list">
+              <li class="muted small">No files indexed yet.</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Settings page -->
+    <div id="settings-page" class="page-section hidden">
+      <div class="settings-layout">
+        <h3>Settings</h3>
+        <p class="muted small">
+          Toggle which APIs LocalAssistant is allowed to use.
+        </p>
+        <div id="settings-list" class="settings-list">
+          <!-- filled by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notifications (for reminders) -->
+<div id="toast-container" class="toast-container"></div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
